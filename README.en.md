@@ -41,9 +41,12 @@ The problem is that the template has **none of it** — no data-driven tables, n
 **1. Every number is recomputed from CSV — never hand-written into HTML.**
 
 Each figure on the page comes from `data/*.csv`, rendered by `build_site.py`.
-The generator back-computes the primary metric from `correct / n` as a consistency check and
-**fails with a non-zero exit if they disagree** — no half-finished output.
 Want to change a number on the page? Change the CSV and re-run.
+
+**It renders; it does not audit your data.** Structural problems (a missing column, a referenced
+file that doesn't exist) block the build. Data-plausibility questions — `correct / n` disagreeing
+with the primary metric, uneven denominators — only print a warning and the page is still produced.
+Opt into strictness yourself with `--strict`.
 
 **2. The sections a leaderboard needs are already built.**
 

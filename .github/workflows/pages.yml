@@ -39,7 +39,7 @@ jobs:
       - name: 安装依赖
         run: pip install -r scripts/requirements.txt
 
-      - name: 校验数据（数字对不上就失败）
+      - name: 结构校验（缺列 / 文件不存在就失败）
         run: python scripts/build_site.py --source site --check-only
 
       - name: 渲染站点

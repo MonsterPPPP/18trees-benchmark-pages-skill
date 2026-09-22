@@ -37,8 +37,9 @@ abstract: |
 
   三条设计原则：
 
-  一、页面里每一个数字都来自 data/*.csv。生成器会用 correct / n 反算主指标做一致性校验，
-  对不上就非零退出，不产出半成品。想在页面上改个数字，就去改 CSV 再重跑。
+  一、页面里每一个数字都来自 data/*.csv。想在页面上改个数字，就去改 CSV 再重跑。
+  它只管渲染，不管你的数据对不对——结构性问题（缺列、引用的文件不存在）会挡住，
+  数据可信度问题（correct/n 与主指标不一致、分母不整齐）只提示，页面照常产出。
 
   二、榜单该有的分区都是现成的开关：排序筛选、分维度热力图、置信区间、
   基线锚点、评测口径脚注、结果提交指引。没配的整段不出现。
@@ -60,7 +61,7 @@ leaderboard:
   title: 它生成什么
   note: |
     这是本 skill 的现场产出，不是截图。数据来自一次真实的四选一评测，
-    由 scripts/build_site.py 从 data/leaderboard.csv 渲染，渲染时做过 correct / n 一致性校验。
+    由 scripts/build_site.py 从 data/leaderboard.csv 渲染。
     点表头可排序，输入框可按模型名或机构筛选。
   highlight: [DeepSeek-V4-Pro-0813, DeepSeek-V4.1-Flash]
   breakdowns:
@@ -86,7 +87,7 @@ gallery:
 
 findings:
   - title: 数字不许手写进 HTML
-    body: 页面里每个数字都来自 data/*.csv。生成器用 correct / n 反算主指标做校验，对不上就非零退出——这是全部数据校验里唯一的硬失败。
+    body: 页面里每个数字都来自 data/*.csv，改数字就是改 CSV 再重跑。它只管渲染，不管你的数据对不对——数据合不合理是使用者的判断。
   - title: 分区是开关，不是义务
     body: 基线锚点、口径脚注、提交指引都给配置才渲染，没配的整段不出现，不会留下空框。本 skill 不规定你的 benchmark 该怎么写。
   - title: 一个依赖，零外部 CDN

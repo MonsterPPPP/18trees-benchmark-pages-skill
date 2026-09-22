@@ -7,10 +7,13 @@ GitHub Pages 上的 benchmark 主页与排行榜。
 用法:
     python build_site.py --source <站点源目录> --out _site
     python build_site.py --source <站点源目录> --check-only    # CI 用，只校验不产出
+    python build_site.py --source <站点源目录> --strict        # 把数据提示也当失败
 
 设计约束:
-  * 页面里每一个数字都来自 data/*.csv，本脚本不做任何数据分析，只做渲染与校验。
-  * 四项校验任何一项失败即非零退出，不产出半成品。
+  * 页面里每一个数字都来自 data/*.csv，本脚本不做任何数据分析，只做渲染。
+  * **本脚本是网站生成器，不是数据审计工具。** 只挡住「渲染不出来」的结构性问题
+    （缺列、文件不存在、数值列填了非数字）；数据本身对不对——correct/n 与主指标
+    是否一致、分母是否整齐——只提示，页面照常产出，由使用者判断。
   * 不提供关闭 footer 上游回链的开关——那是 CC BY-SA 4.0 的署名条件。
 
 依赖: PyYAML（见同目录 requirements.txt）
@@ -236,64 +239,83 @@ def coerce(value):
         return s
 
 
-def check_leaderboard(rows: list[dict], lb: dict, src: Path) -> list[str]:
-    """返回错误列表。空列表 = 通过。"""
-    errors, unit = [], lb["unit"]
-    metric = lb["primary_metric"]
+def check_leaderboard(rows: list[dict], lb: dict, src: Path) -> tuple[list[str], list[str]]:
+    """返回 (errors, warnings)。
+
+    **errors** 是结构性错误——缺列、主指标列不存在、数值列填了非数字。
+    这些会让页面渲染不出来，必须挡住。
+
+    **warnings** 是数据可信度提示——correct/n 与主指标对不上、各参赛者分母不一致。
+    这些**不影响渲染，页面照常产出**，由使用者自己判断要不要回去改数据。
+    本 skill 是网站生成器，不是数据审计工具；数据对不对是使用者的事。
+    需要把警告也当成失败时，用 `--strict`（CI 里可以这么配）。
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    unit, metric, name_of_src = lb["unit"], lb["primary_metric"], lb["source"]
 
     if not rows:
-        return [f"{lb['source']} 没有数据行"]
+        return [f"{name_of_src} 没有数据行"], []
 
     cols = set(rows[0].keys())
-    for need in ("model", "n", "correct", metric):
+    for need in ("model", metric):
         if need not in cols:
-            errors.append(f"{lb['source']} 缺少必填列 `{need}`（现有列: {sorted(cols)}）")
+            errors.append(f"{name_of_src} 缺少必填列 `{need}`（现有列: {sorted(cols)}）")
     if errors:
-        return errors
+        return errors, warnings
 
-    seen, ns = set(), []
+    # n 与 correct 都是可选的：n 只用于概览条上的「题目数」，
+    # correct 只用于上面那条一致性提示。两者都不参与渲染。
+    has_n, has_correct = "n" in cols, "correct" in cols
+
+    seen: set[str] = set()
+    ns: list[int] = []
+
     for i, r in enumerate(rows, start=2):  # 2 = 首行数据对应 CSV 第 2 行
         name = (r.get("model") or "").strip()
         if not name:
-            errors.append(f"{lb['source']} 第 {i} 行 model 为空")
+            errors.append(f"{name_of_src} 第 {i} 行 model 为空")
             continue
         if name in seen:
-            errors.append(f"{lb['source']} 第 {i} 行 model 重复: {name}")
+            errors.append(f"{name_of_src} 第 {i} 行 model 重复: {name}")
         seen.add(name)
 
-        n, correct, value = coerce(r["n"]), coerce(r["correct"]), coerce(r[metric])
-        if not isinstance(n, int) or n <= 0:
-            errors.append(f"{lb['source']} 第 {i} 行 n 非法: {r['n']!r}")
-            continue
-        if not isinstance(correct, int) or not (0 <= correct <= n):
-            errors.append(f"{lb['source']} 第 {i} 行 correct 非法: {r['correct']!r}（n={n}）")
-            continue
+        value = coerce(r[metric])
         if not isinstance(value, (int, float)):
-            errors.append(f"{lb['source']} 第 {i} 行 {metric} 非数值: {r[metric]!r}")
+            errors.append(f"{name_of_src} 第 {i} 行 {metric} 非数值: {r[metric]!r}")
             continue
 
-        ns.append(n)
+        n = coerce(r.get("n")) if has_n else None
+        correct = coerce(r.get("correct")) if has_correct else None
 
-        # ★ 核心校验：数字必须能从 correct/n 重算出来
-        if unit == "ratio":
-            expect, tol = correct / n, 0.0005
-        else:
-            expect, tol = correct / n * 100, 0.05
-        if abs(float(value) - expect) > tol:
-            errors.append(
-                f"{lb['source']} 第 {i} 行「{name}」：{metric}={value} 与 "
-                f"correct/n={expect:.4f} 对不上（差 {abs(float(value) - expect):.4f}，容忍 {tol}）"
-            )
+        if has_n and (not isinstance(n, int) or n <= 0):
+            warnings.append(f"{name_of_src} 第 {i} 行 n 不是正整数: {r.get('n')!r}"
+                            f"（该行「题目数」会显示为空）")
+            n = None
 
-    if not lb["allow_unequal_n"] and len(set(ns)) > 1:
-        detail = ", ".join(f"{r['model']}={r['n']}" for r in rows[:6])
-        errors.append(
-            f"各参赛者分母 n 不一致（{detail}…）。"
-            f"若确为有意，请在 site.yaml 设 leaderboard.allow_unequal_n: true，"
-            f"页面会强制显示 n 列。"
+        if isinstance(n, int) and isinstance(correct, int):
+            ns.append(n)
+            if not 0 <= correct <= n:
+                warnings.append(f"{name_of_src} 第 {i} 行「{name}」correct={correct} 超出 [0, {n}]")
+            else:
+                expect = correct / n if unit == "ratio" else correct / n * 100
+                tol = 0.0005 if unit == "ratio" else 0.05
+                if abs(float(value) - expect) > tol:
+                    warnings.append(
+                        f"{name_of_src} 第 {i} 行「{name}」：{metric}={value} 与 correct/n="
+                        f"{expect:.4f} 不一致（差 {abs(float(value) - expect):.4f}）。"
+                        f"可能是故意的（比如换过分母口径），也可能是漏更新了；"
+                        f"页面以 {metric} 列为准照常渲染。"
+                    )
+
+    if has_n and not lb["allow_unequal_n"] and len(set(ns)) > 1:
+        detail = ", ".join(f"{r.get('model')}={r.get('n')}" for r in rows[:6])
+        warnings.append(
+            f"各参赛者分母 n 不一致（{detail}…）。页面照常渲染；"
+            f"确实如此的话，可在 site.yaml 设 leaderboard.allow_unequal_n: true 关掉本提示。"
         )
 
-    return errors
+    return errors, warnings
 
 
 def check_referenced_files(cfg: dict, src: Path) -> list[str]:
@@ -429,7 +451,9 @@ def render_leaderboard_payload(rows: list[dict], lb: dict) -> dict:
     if "n" in (rows[0].keys() if rows else ()):
         ordered.append("n")
     for c in rows[0].keys() if rows else ():
-        if c not in ordered and c not in {"correct", "ci_low", "ci_high"}:
+        # correct 只用于数据提示；ci_low/ci_high 合并成一列；
+        # link 被模型名的超链接消费掉，不单独占一列
+        if c not in ordered and c not in {"correct", "ci_low", "ci_high", "link"}:
             ordered.append(c)
     if "ci_low" in (rows[0].keys() if rows else ()) and "ci_high" in (rows[0].keys() if rows else ()):
         ordered.append("_ci")
@@ -665,7 +689,6 @@ def section_html(name: str, cfg: dict, src: Path, ctx: dict,
                 best = v
 
         ns = {r.get("n") for r in lb_payload["rows"] if isinstance(r.get("n"), int)}
-        n_disp = str(sorted(ns)[0]) if len(ns) == 1 else "不等"
         q = cfg["lang"] == "en"
         items = []
 
@@ -681,10 +704,16 @@ def section_html(name: str, cfg: dict, src: Path, ctx: dict,
             lift_disp = f"{lift:+.1f}pt" if lift is not None else "—"
             items.append(f'<span class="baseline-item"><strong>{"vs baseline" if q else "领先基线"}</strong> '
                          f'{lift_disp}</span>')
-        items.append(f'<span class="baseline-item baseline-n"><strong>'
-                     f'{"Questions" if q else "题目数"}</strong> {n_disp}</span>')
 
-        meta_bar = ('<div class="baseline-bar" role="note">\n' + "\n      ".join(items) + "\n    </div>")
+        # 题目数：CSV 里有 n 列才显示
+        if ns:
+            n_disp = str(sorted(ns)[0]) if len(ns) == 1 else ("varies" if q else "不等")
+            items.append(f'<span class="baseline-item baseline-n"><strong>'
+                         f'{"Questions" if q else "题目数"}</strong> {n_disp}</span>')
+
+        meta_bar = ""
+        if items:
+            meta_bar = '<div class="baseline-bar" role="note">\n' + "\n      ".join(items) + "\n    </div>"
 
         metrics_html = render_metrics(cfg, src)
         metrics_block = ""
@@ -849,7 +878,10 @@ def main():
     ap.add_argument("--source", required=True, help="站点源目录（含 site.yaml）")
     ap.add_argument("--out", default="_site", help="输出目录（默认 _site）")
     ap.add_argument("--check-only", action="store_true",
-                    help="只做数据校验，不产出文件；CI 用")
+                    help="只做校验，不产出文件；CI 用")
+    ap.add_argument("--strict", action="store_true",
+                    help="把数据提示（correct/n 与主指标不一致等）也当成失败。"
+                         "默认不这么做——数据对不对由使用者判断")
     args = ap.parse_args()
 
     src = Path(args.source).resolve()
@@ -859,7 +891,9 @@ def main():
     cfg = load_config(src)
 
     # ── 校验 ──────────────────────────────────────────
+    # 结构性问题 → 挡住；数据可信度问题 → 提示，照常渲染
     errors = check_referenced_files(cfg, src)
+    warnings: list[str] = []
 
     lb_rows = []
     lb_path = src / cfg["leaderboard"]["source"]
@@ -867,11 +901,23 @@ def main():
         errors.append(f"leaderboard.source 不存在: {cfg['leaderboard']['source']}")
     else:
         lb_rows = read_csv(lb_path)
-        errors += check_leaderboard(lb_rows, cfg["leaderboard"], src)
+        errs, warns = check_leaderboard(lb_rows, cfg["leaderboard"], src)
+        errors += errs
+        warnings += warns
+
+    for msg in warnings:
+        warn(msg)
 
     if errors:
-        die("数据校验失败:\n  - " + "\n  - ".join(errors))
-    ok(f"数据校验通过（{len(lb_rows)} 个参赛者）")
+        die("结构校验失败（页面渲染不出来）:\n  - " + "\n  - ".join(errors))
+
+    if warnings and args.strict:
+        die(f"--strict：{len(warnings)} 条数据提示被视为失败")
+
+    if warnings:
+        ok(f"数据就绪（{len(lb_rows)} 个参赛者，{len(warnings)} 条提示不影响渲染）")
+    else:
+        ok(f"数据就绪（{len(lb_rows)} 个参赛者）")
 
     if args.check_only:
         ok("--check-only：未产出文件")

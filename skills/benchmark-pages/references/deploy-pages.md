@@ -110,7 +110,8 @@ jobs:
 **方式 A：PR 到榜单数据文件**（轻，适合小 benchmark）
 
 `submission.repo` 指向存放 `data/` 的仓库。提 PR 改 `leaderboard.csv`，
-CI 跑一致性校验（`build_site.py --check-only`），过了就合。
+CI 跑结构校验（`build_site.py --check-only`）挡掉缺列之类的错误，过了就合。
+要连数据可信度一起卡，CI 里加 `--strict`。
 
 **方式 B：独立 results 仓库**（重，swe-bench 的做法）
 
@@ -145,7 +146,8 @@ CI 跑一致性校验（`build_site.py --check-only`），过了就合。
 - [ ] `base_url` 正确，OG 卡片用实际 URL 验证过
 - [ ] 站点源目录（`site.yaml` + `data/`）已进版本控制，**不是只在本地**
 - [ ] 数据集本身的公开范围已核对（案例题是否匿名化、有无真实个人信息）
-- [ ] 数据校验通过：`python scripts/build_site.py --source <源目录> --check-only`
+- [ ] 结构校验通过：`python scripts/build_site.py --source <源目录> --check-only`
+- [ ] 数据提示已逐条看过（`correct/n` 不一致、分母不整齐 —— 确认是有意的还是漏更新了）
 - [ ] footer 上游回链存在（生成器会硬校验，改模板时别把它弄丢）
 
 以下按需，不是必须：
