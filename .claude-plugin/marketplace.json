@@ -1,0 +1,17 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
+  "name": "18trees-benchmark-pages-skill",
+  "description": "把 rawdata + 写好的论文 + 实验分析报告，一键变成能托管在 GitHub Pages 上的 benchmark 主页与排行榜。",
+  "owner": {
+    "name": "十八木",
+    "url": "https://github.com/MonsterPPPP"
+  },
+  "plugins": [
+    {
+      "name": "benchmark-pages",
+      "description": "数据驱动的 benchmark 静态站生成器：论文页底座 + 可排序筛选的榜单 + 结果提交指引，一条命令渲染。",
+      "source": "./",
+      "category": "research"
+    }
+  ]
+}

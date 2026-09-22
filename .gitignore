@@ -1,0 +1,26 @@
+# 产物目录：生成出来的站点源码不该进仓库，只有它的源（site.yaml + data/）进仓库
+_site/
+dist-site/
+.output/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+
+# 临时目录
+.tmp-*/
+*.tmp
+
+# 冒烟测试输出目录
+_smoke/

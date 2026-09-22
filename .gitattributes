@@ -1,0 +1,28 @@
+# 强制 LF 换行。
+# 不写这一条，Windows 上 commit 出去的 .sh 会带 CRLF，在 Linux / GitHub Pages 构建上
+# 直接以 "bash\r: No such file or directory" 失败——而且本地 git diff 看不出来。
+* text=auto eol=lf
+
+*.sh    text eol=lf
+*.py    text eol=lf
+*.md    text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.json  text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.txt   text eol=lf
+*.csv   text eol=lf
+
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.mp4   binary
+*.woff  binary
+*.woff2 binary

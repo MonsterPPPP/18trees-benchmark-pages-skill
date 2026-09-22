@@ -1,0 +1,40 @@
+{
+  "name": "benchmark-pages",
+  "version": "0.1.0",
+  "description": "Turn raw data, a finished paper, and an analysis report into a GitHub-Pages-ready benchmark homepage with a sortable, filterable leaderboard.",
+  "author": {
+    "name": "十八木",
+    "url": "https://github.com/MonsterPPPP"
+  },
+  "homepage": "https://github.com/MonsterPPPP/18trees-benchmark-pages-skill",
+  "repository": "https://github.com/MonsterPPPP/18trees-benchmark-pages-skill",
+  "license": "CC-BY-SA-4.0",
+  "keywords": [
+    "benchmark",
+    "leaderboard",
+    "github-pages",
+    "static-site",
+    "academic",
+    "research-paper",
+    "evaluation",
+    "skills",
+    "claude-code",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Benchmark Pages",
+    "shortDescription": "rawdata + 论文 → GitHub Pages benchmark 主页与排行榜",
+    "longDescription": "把一份 benchmark 的原始数据、写好的论文和实验分析报告，渲染成一个能直接托管在 GitHub Pages 上的静态站：论文主页负责讲清楚这个 benchmark 是什么，榜单页负责让人横向比较模型。数据驱动——改一次 CSV 重跑一次脚本，页面永远和数字一致。",
+    "developerName": "十八木",
+    "category": "Research",
+    "capabilities": ["Instructions"],
+    "websiteURL": "https://github.com/MonsterPPPP/18trees-benchmark-pages-skill",
+    "defaultPrompt": [
+      "用 $benchmark-pages 把这份实验数据做成 benchmark 主页和排行榜",
+      "我的 benchmark 马上要开源了，帮我把 GitHub Pages 站点搭出来",
+      "榜单数据更新了，重跑一遍生成脚本"
+    ],
+    "brandColor": "#2F6B4F"
+  }
+}

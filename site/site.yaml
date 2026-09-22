@@ -1,0 +1,135 @@
+# ══════════════════════════════════════════════════════════════════
+# 这个站点源目录同时承担两个身份：
+#
+#   1. 本仓库发布到 GitHub Pages 的页面 —— 讲清楚 benchmark-pages 是什么
+#   2. skill 的输入格式示例 —— 一份可直接照抄的 site.yaml + data/ 骨架
+#
+# 页面上那个排行榜不是截图，是用真实评测数据（6 个模型 × 2492 道题）
+# 由 scripts/build_site.py 现场渲染的。它就是本 skill 的产出形态。
+# ══════════════════════════════════════════════════════════════════
+
+title: benchmark-pages
+tagline: 把 benchmark 的实验数据、论文和分析报告，变成一个能托管在 GitHub Pages 上的主页与排行榜
+
+authors:
+  - name: 十八木
+    url: "https://github.com/MonsterPPPP"
+
+venue: 18trees · AI skill
+date: 2026-09-22
+
+base_url: "https://monsterpppp.github.io/18trees-benchmark-pages-skill"
+brand_color: "#2F6B4F"
+
+keywords: [benchmark, leaderboard, GitHub Pages, 学术主页, LLM 评测, 静态站生成器]
+
+abstract: |
+  benchmark-pages 是一个 skill：给它一份 benchmark 的实验数据、一篇写好的论文和一份分析报告，
+  它渲染出一个能直接托管在 GitHub Pages 上的静态站——论文主页负责讲清这个 benchmark 是什么，
+  榜单页负责让人横向比较模型。
+
+  你正在看的这一页就是它生成的。下面那个排行榜不是截图，是真实评测数据
+  （6 个模型、2492 道四选一题）由 scripts/build_site.py 现场渲染出来的。
+
+  它解决的是一个具体问题：做 benchmark 的人都在 fork 同一个学术主页模板，
+  然后手搓 benchmark 特有的部分——表格怎么从实验结果生成、模型更新了榜单怎么改、
+  别人怎么把自己的结果加进来。这些"每个人都重做一遍"的部分，本 skill 已经做完了。
+
+  三条设计原则：
+
+  一、页面里每一个数字都来自 data/*.csv。生成器会用 correct / n 反算主指标做一致性校验，
+  对不上就非零退出，不产出半成品。想在页面上改个数字，就去改 CSV 再重跑。
+
+  二、榜单该有的分区都是现成的开关：排序筛选、分维度热力图、置信区间、
+  基线锚点、评测口径脚注、结果提交指引。没配的整段不出现。
+
+  三、只有一个依赖（PyYAML）。表格引擎已随仓库分发，生成的站点完全自包含、离线可打开。
+
+links:
+  code: "https://github.com/MonsterPPPP/18trees-benchmark-pages-skill"
+  leaderboard: leaderboard.html
+
+leaderboard:
+  source: data/leaderboard.csv
+  primary_metric: overall_acc
+  primary_label: 总准确率
+  higher_is_better: true
+  unit: percent
+  baseline: 25.0
+  baseline_label: 随机基线（四选一）
+  title: 它生成什么
+  note: |
+    这是本 skill 的现场产出，不是截图。数据来自一次真实的四选一评测，
+    由 scripts/build_site.py 从 data/leaderboard.csv 渲染，渲染时做过 correct / n 一致性校验。
+    点表头可排序，输入框可按模型名或机构筛选。
+  highlight: [DeepSeek-V4-Pro-0813, DeepSeek-V4.1-Flash]
+  breakdowns:
+    - title: 分维度：理论题 vs 命例题
+      source: data/breakdown_task.csv
+      note: 演示「按任意维度拆表」。色阶按列独立归一化——跨列题目难度不同，全表一个色阶会把差异抹平。
+    - title: 分维度：分类细项 · 理论题（14 类）
+      source: data/breakdown_category_theory.csv
+      note: 列数多时页面自动横向滚动，并把模型列冻结在最左侧。
+    - title: 分维度：分类细项 · 命例题（11 类）
+      source: data/breakdown_category_case.csv
+      note: 同一批模型在另一个任务族上的表现，用来看跨维度对比。
+
+gallery:
+  source: figures/
+  captions:
+    "teaser_main_results.png": 主结果图。caption 在 site.yaml 的 gallery.captions 里配，按文件名键控
+    "03a_category_heatmap_theory.png": 结果图按文件名排序渲染成网格，窄屏自动改为单列
+    "03b_category_heatmap_case.png": 图不需要手动排版，放进 figures/ 就会被收进来
+    "06_invalid_rate.png": 每张图会自动带 alt 文本；没配 caption 的用文件名兜底并打警告
+    "07_accuracy_vs_reasoning.png": 演示第三张图
+    "08_accuracy_vs_latency.png": 演示第四张图
+
+findings:
+  - title: 数字不许手写进 HTML
+    body: 页面里每个数字都来自 data/*.csv。生成器用 correct / n 反算主指标做校验，对不上就非零退出——这是全部数据校验里唯一的硬失败。
+  - title: 分区是开关，不是义务
+    body: 基线锚点、口径脚注、提交指引都给配置才渲染，没配的整段不出现，不会留下空框。本 skill 不规定你的 benchmark 该怎么写。
+  - title: 一个依赖，零外部 CDN
+    body: 只要 PyYAML。表格引擎 Tabulator 以 vendored 形式随站点分发，生成的站点离线可打开，不依赖任何 CDN。
+
+limitations: |
+  本 skill 的边界，写在页面上以免被误用：
+
+  - **它不做评测。** 跑模型、跑 prompt 在别处完成，本 skill 只消费评测产物。
+  - **它不做数据分析。** 显著性检验、消融、item difficulty 应该在你的分析脚本里算完，本 skill 只把结果渲染成表和图，不现算。
+  - **它不做视觉设计。** 版面沿用学术主页的通用惯例，目标是「一眼看出这是个正经 benchmark 页」，不是「好看」。
+  - **它只产出静态站。** 需要登录、实时提交、跑代码验证分数的榜单，静态站做不到，得用 HF Spaces 或自建后端。
+
+  许可方面：模板层派生自 Academic Project Page Template 与 Nerfies（均为 CC BY-SA 4.0），
+  因此生成出的每个站点 footer 都会带上游回链——这是授权条件，生成器不提供关闭开关。
+
+bibtex: |
+  @misc{benchmark-pages,
+    title        = {benchmark-pages: 把 benchmark 数据变成 GitHub Pages 站点},
+    author       = {十八木},
+    year         = {2026},
+    howpublished = {https://github.com/MonsterPPPP/18trees-benchmark-pages-skill}
+  }
+
+submission:
+  enabled: true
+  title: 怎么用
+  repo: "https://github.com/MonsterPPPP/18trees-benchmark-pages-skill"
+  instructions: |
+    **安装**（Claude Code）：
+    `/plugin marketplace add MonsterPPPP/18trees-benchmark-pages-skill` 然后
+    `/plugin install benchmark-pages@18trees-benchmark-pages-skill`
+
+    **三步上手**：
+
+    1. 建一个站点源目录，写 `site.yaml`（本页的配置就是 [`site/site.yaml`](https://github.com/MonsterPPPP/18trees-benchmark-pages-skill/blob/main/site/site.yaml)，
+       可以直接照抄）
+    2. 把榜单数据放进 `data/leaderboard.csv`——一行一个参赛者，必须含 `model`、`n`、`correct` 和主指标列
+    3. 跑 `python scripts/build_site.py --source <源目录> --out _site`
+
+    生成器会校验数据，通过后输出 `_site/`，直接推到 GitHub Pages 即可。
+
+    完整规范见仓库里的 `skills/benchmark-pages/references/`：
+    输入契约、榜单列规范、`site.yaml` 全字段、部署与提交流程。
+
+sections: [teaser, abstract, leaderboard, findings, gallery, limitations, bibtex, submission]

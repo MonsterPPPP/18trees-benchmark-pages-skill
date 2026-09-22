@@ -1,0 +1,60 @@
+# 把 site 渲染成静态站并发布到 GitHub Pages。
+#
+# 这个 workflow 本身就是本 skill 的一个用法示例：
+# 数据或 site.yaml 一变，站点自动重建，页面永远和数字一致。
+#
+# 启用方式：仓库 Settings → Pages → Source 选择 "GitHub Actions"。
+
+name: demo-site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'scripts/build_site.py'
+      - 'skills/benchmark-pages/assets/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        run: pip install -r scripts/requirements.txt
+
+      - name: 校验数据（数字对不上就失败）
+        run: python scripts/build_site.py --source site --check-only
+
+      - name: 渲染站点
+        run: python scripts/build_site.py --source site --out _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,9 @@
+{
+  "name": "benchmark-pages",
+  "version": "0.1.0",
+  "description": "把 rawdata + 写好的论文 + 实验分析报告，一键变成能托管在 GitHub Pages 上的 benchmark 主页与排行榜。",
+  "author": {
+    "name": "十八木",
+    "url": "https://github.com/MonsterPPPP"
+  }
+}
